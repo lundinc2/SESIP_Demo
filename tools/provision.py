@@ -133,10 +133,14 @@ class OpenSSLAgent:
         self.p = Path(self.temp_dir)
         self.p.mkdir()
         self.signer_key = "ecdsasigner.key"
+        self.signer_public_key = "ecdsasigner_public.key"
         self.signer_cert = "ecdsasigner.crt"
 
     def get_signer_key_path(self):
         return self.p / Path(self.signer_key)
+
+    def get_signer_public_key_path(self):
+        return self.p / Path(self.signer_public_key)
 
     def get_signer_cert_path(self):
         return self.p / Path(self.signer_cert)
@@ -145,6 +149,7 @@ class OpenSSLAgent:
         commands = [
             f"openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -pkeyopt ec_param_enc:named_curve -outform PEM -out {self.signer_key}",
             f'openssl req -new -x509 -nodes -days 365 -key {self.signer_key} -out {self.signer_cert} -subj "/C=US/ST=WA/L=Place/O=YourCompany/OU=IT/CN=www.yours.com/emailAddress=yourEmail@your.com"',
+            f'openssl x509 -in {self.signer_cert} -noout -pubkey -out {self.signer_public_key}',
         ]
         for command in commands:
             subprocess.run(
@@ -221,8 +226,8 @@ def provision_ota(stream_interface):
     acm_agent.import_ota_credentials(
         ssl.get_signer_cert_path(), ssl.get_signer_key_path()
     )
-    with open(ssl.get_signer_cert_path(), "r") as ota_cert:
-        stream_interface.write(ota_cert.read())
+    with open(ssl.get_signer_public_key_path(), "r") as ota_pub_key:
+        stream_interface.write(ota_pub_key.read())
     ssl.cleanup()
 
 
